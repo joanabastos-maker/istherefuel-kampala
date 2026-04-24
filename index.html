@@ -10,25 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --yellow: #FCDC04;
-      --green: #1A8A4A;
-      --orange: #D97706;
-      --red: #C0200A;
-      --bg: #F7F5F0;
-      --card: #fff;
-      --text: #111;
-      --muted: #666;
-      --border: #E0DDD5;
-    }
+    :root { --yellow: #FCDC04; --green: #1A8A4A; --orange: #D97706; --red: #C0200A; --bg: #F7F5F0; --card: #fff; --text: #111; --muted: #666; --border: #E0DDD5; }
     html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Syne', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding-bottom: 90px;
-    }
+    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     header { background: #000; border-bottom: 3px solid var(--yellow); position: sticky; top: 0; z-index: 50; }
     .header-inner { display: flex; align-items: center; justify-content: space-between; padding: 13px 20px; }
     .logo { display: flex; align-items: center; gap: 10px; }
@@ -81,17 +65,12 @@
     .ctime { font-size: 10px; color: #bbb; font-family: 'Space Mono', monospace; }
     .empty { text-align: center; padding: 50px 20px; color: var(--muted); }
     .empty-icon { font-size: 36px; margin-bottom: 10px; }
-    .empty p { font-size: 13px; }
+    .empty p { font-size: 13px; margin-top: 6px; }
+    .loading { text-align: center; padding: 50px 20px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
     .report-fab { display: block; background: #000; color: var(--yellow); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; padding: 18px 22px; text-decoration: none; text-align: center; border-top: 3px solid var(--yellow); letter-spacing: 0.3px; transition: background .2s; }
     .report-fab:hover { background: #1a1a1a; }
-    footer { text-align: center; padding: 24px 20px 10px; font-size: 11px; color: #aaa; font-family: 'Space Mono', monospace; border-top: 1px solid var(--border); margin-top: 10px; }
-    footer a { color: #888; text-decoration: underline; }
-    @media (max-width: 480px) {
-      .logo h1 { font-size: 15px; }
-      .stt-n { font-size: 22px; }
-      .fuel-toggle { margin-left: 0; }
-      .filters { gap: 5px; }
-    }
+    footer { text-align: center; padding: 16px 20px; font-size: 11px; color: #aaa; font-family: 'Space Mono', monospace; border-top: 1px solid var(--border); }
+    @media (max-width: 480px) { .logo h1 { font-size: 15px; } .stt-n { font-size: 22px; } .fuel-toggle { margin-left: 0; } .filters { gap: 5px; } }
   </style>
 </head>
 <body>
@@ -115,16 +94,16 @@
     </div>
     <div class="update-bar">
       <span>next update: <span id="nxt">2:00</span></span>
-      <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
+      <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
     </div>
   </header>
 
   <nav class="zones" id="zones"></nav>
 
   <section class="stats">
-    <div class="stt"><div class="stt-n g" id="ca">0</div><div class="stt-l">available</div></div>
-    <div class="stt"><div class="stt-n o" id="cq">0</div><div class="stt-l">queue</div></div>
-    <div class="stt"><div class="stt-n r" id="ce">0</div><div class="stt-l">empty</div></div>
+    <div class="stt"><div class="stt-n g" id="ca">—</div><div class="stt-l">available</div></div>
+    <div class="stt"><div class="stt-n o" id="cq">—</div><div class="stt-l">queue</div></div>
+    <div class="stt"><div class="stt-n r" id="ce">—</div><div class="stt-l">empty</div></div>
   </section>
 
   <div class="filters">
@@ -138,65 +117,113 @@
     </div>
   </div>
 
-  <main class="list" id="list"></main>
+  <main class="list" id="list"><div class="loading">Loading stations...</div></main>
 
   <footer>
     <p>Data is community-reported. Help keep it accurate.</p>
   </footer>
 
   <a class="report-fab"
-     href="https://docs.google.com/forms/d/e/1FAIpQLSfv-UJyaqEVK3CF_c9yQaq1iE6Lr4dHmJhd0nU9DGRYhLxcCQ/viewform"
-     target="_blank"
-     rel="noopener">
+     href="https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform"
+     target="_blank" rel="noopener">
     + Report a station
   </a>
 
   <script>
-    const stations = [
-      { name: "TotalEnergies — Nakasero",  zone: "Nakasero",    status: "available", petrol: true,  diesel: true,  updated: "5 min ago",    address: "Nakasero Road" },
-      { name: "Shell — Kampala Road",       zone: "City Centre", status: "queue",     petrol: true,  diesel: false, updated: "12 min ago",   address: "Kampala Road" },
-      { name: "Stabex — Kabalagala",        zone: "Kabalagala",  status: "available", petrol: true,  diesel: true,  updated: "3 min ago",    address: "Gaba Road" },
-      { name: "TotalEnergies — Ntinda",     zone: "Ntinda",      status: "empty",     petrol: false, diesel: false, updated: "45 min ago",   address: "Ntinda Complex" },
-      { name: "Oryx — Bugolobi",            zone: "Bugolobi",    status: "queue",     petrol: true,  diesel: true,  updated: "8 min ago",    address: "Bugolobi Flats Rd" },
-      { name: "Shell — Entebbe Road",       zone: "Makindye",    status: "available", petrol: true,  diesel: true,  updated: "2 min ago",    address: "Entebbe Road" },
-      { name: "Stabex — Wandegeya",         zone: "Wandegeya",   status: "empty",     petrol: false, diesel: false, updated: "1h 20min ago", address: "Bombo Road" },
-      { name: "TotalEnergies — Lugogo",     zone: "Lugogo",      status: "available", petrol: true,  diesel: true,  updated: "15 min ago",   address: "Lugogo Bypass" },
-      { name: "Oryx — Naalya",              zone: "Naalya",      status: "queue",     petrol: true,  diesel: false, updated: "20 min ago",   address: "Naalya Road" },
-      { name: "Vivo Energy — Bukoto",       zone: "Bukoto",      status: "available", petrol: true,  diesel: true,  updated: "7 min ago",    address: "Bukoto Street" },
-      { name: "Shell — Makerere",           zone: "Makerere",    status: "available", petrol: true,  diesel: false, updated: "10 min ago",   address: "Makerere Hill Rd" },
-      { name: "TotalEnergies — Kireka",     zone: "Kireka",      status: "empty",     petrol: false, diesel: false, updated: "2h ago",       address: "Jinja Road" },
-    ];
-    const allZones = ["All zones", ...[...new Set(stations.map(s => s.zone))].sort()];
+    const SHEET_ID = '2PACX-1vRB2fzVzqprPx-YUlES2jFZqptHzI2jo3xUTMJEJvU4RlldllWERgO3pVkeTvtLvCkaq4GDB8cjsWqr';
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
+    let allStations = [];
     let zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
-    function renderZones() {
-      document.getElementById('zones').innerHTML = allZones.map(z => `<button class="zbtn${z===zone?' on':''}" onclick="setZone('${z}')">${z}</button>`).join('');
+
+    function parseStatus(raw) {
+      if (!raw) return 'empty';
+      const s = raw.toLowerCase();
+      if (s.includes('no queue') || (s.includes('available') && !s.includes('queue'))) return 'available';
+      if (s.includes('queue') || s.includes('with queue')) return 'queue';
+      if (s.includes('empty') || s.includes('out')) return 'empty';
+      return 'empty';
     }
+
+    function timeAgo(dateStr) {
+      if (!dateStr) return 'unknown';
+      const date = new Date(dateStr);
+      if (isNaN(date)) return 'recently';
+      const diff = Math.floor((Date.now() - date) / 1000);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff/60)} min ago`;
+      if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+      return `${Math.floor(diff/86400)}d ago`;
+    }
+
+    async function loadData() {
+      try {
+        document.getElementById('list').innerHTML = '<div class="loading">Loading stations...</div>';
+        const res = await fetch(CSV_URL);
+        const text = await res.text();
+        const rows = text.trim().split('\n').slice(1);
+        const stationMap = {};
+        rows.forEach(row => {
+          const cols = row.split(',');
+          const timestamp = cols[0]?.replace(/"/g,'').trim();
+          const name = cols[1]?.replace(/"/g,'').trim();
+          const area = cols[2]?.replace(/"/g,'').trim();
+          const statusRaw = cols[3]?.replace(/"/g,'').trim();
+          const notes = cols[4]?.replace(/"/g,'').trim();
+          if (!name) return;
+          stationMap[name] = { name, zone: area || 'Other', status: parseStatus(statusRaw), notes, updated: timeAgo(timestamp), petrol: true, diesel: true };
+        });
+        allStations = Object.values(stationMap);
+        if (allStations.length === 0) {
+          allStations = [
+            { name: "TotalEnergies — Nakasero", zone: "Nakasero", status: "available", petrol: true, diesel: true, updated: "sample", notes: "" },
+            { name: "Shell — Kampala Road", zone: "City Centre", status: "queue", petrol: true, diesel: false, updated: "sample", notes: "" },
+            { name: "Stabex — Kabalagala", zone: "Kabalagala", status: "empty", petrol: false, diesel: false, updated: "sample", notes: "" },
+          ];
+        }
+        renderZones(); render();
+      } catch(e) {
+        document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load data. Please try again.</p></div>';
+      }
+    }
+
+    function renderZones() {
+      const zones = ["All zones", ...[...new Set(allStations.map(s => s.zone))].sort()];
+      document.getElementById('zones').innerHTML = zones.map(z => `<button class="zbtn${z===zone?' on':''}" onclick="setZone('${z}')">${z}</button>`).join('');
+    }
+
     function setZone(z) { zone=z; renderZones(); render(); }
-    function setFilter(f,btn) { filter=f; document.querySelectorAll('.fbtn').forEach(b=>b.className='fbtn'); btn.classList.add(f==='all'?'fa':f==='available'?'fg':f==='queue'?'fo':'fr'); render(); }
+    function setFilter(f, btn) { filter=f; document.querySelectorAll('.fbtn').forEach(b=>b.className='fbtn'); btn.classList.add(f==='all'?'fa':f==='available'?'fg':f==='queue'?'fo':'fr'); render(); }
     function setFuel(f) { fuel=f; document.getElementById('fp').className='ftog'+(f==='petrol'?' on':''); document.getElementById('fd').className='ftog'+(f==='diesel'?' on':''); render(); }
+
     function render() {
-      const list = stations.filter(s => {
-        if (zone!=="All zones" && s.zone!==zone) return false;
-        if (filter!=='all' && s.status!==filter) return false;
-        if (fuel==='petrol' && !s.petrol) return false;
-        if (fuel==='diesel' && !s.diesel) return false;
+      const list = allStations.filter(s => {
+        if (zone !== "All zones" && s.zone !== zone) return false;
+        if (filter !== 'all' && s.status !== filter) return false;
         return true;
       });
-      document.getElementById('ca').textContent = stations.filter(s=>s.status==='available').length;
-      document.getElementById('cq').textContent = stations.filter(s=>s.status==='queue').length;
-      document.getElementById('ce').textContent = stations.filter(s=>s.status==='empty').length;
+      document.getElementById('ca').textContent = allStations.filter(s=>s.status==='available').length;
+      document.getElementById('cq').textContent = allStations.filter(s=>s.status==='queue').length;
+      document.getElementById('ce').textContent = allStations.filter(s=>s.status==='empty').length;
       const el = document.getElementById('list');
       if (!list.length) { el.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><p>No stations found for this filter.</p></div>`; return; }
       el.innerHTML = list.map(s => {
         const badge = s.status==='available' ? `<span class="badge bav">✓ Available</span>` : s.status==='queue' ? `<span class="badge bqu">⏳ Queue</span>` : `<span class="badge bem">✕ Empty</span>`;
-        const tags = (s.petrol?'<span class="ftag">PETROL</span>':'')+(s.diesel?'<span class="ftag">DIESEL</span>':'');
-        return `<article class="card ${s.status}"><div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.address} · ${s.zone}</div></div>${badge}</div><div class="cb"><div class="ftags">${tags}</div><div class="ctime">updated ${s.updated}</div></div></article>`;
+        const notes = s.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>` : '';
+        return `<article class="card ${s.status}"><div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone}</div>${notes}</div>${badge}</div><div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">updated ${s.updated}</div></div></article>`;
       }).join('');
     }
-    function refreshData() { countdown=120; const el=document.getElementById('list'); el.style.opacity='.4'; setTimeout(()=>{el.style.opacity='1';render();},500); }
-    function tick() { document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
-    function tickCD() { countdown--; if(countdown<=0){countdown=120;refreshData();} const m=Math.floor(countdown/60),s=countdown%60; document.getElementById('nxt').textContent=`${m}:${s.toString().padStart(2,'0')}`; }
-    renderZones(); render(); tick(); setInterval(tick,1000); setInterval(tickCD,1000);
+
+    function tick() { document.getElementById('clk').textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+    function tickCD() {
+      countdown--;
+      if (countdown <= 0) { countdown = 120; loadData(); }
+      const m = Math.floor(countdown/60), s = countdown%60;
+      document.getElementById('nxt').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    }
+
+    loadData(); tick();
+    setInterval(tick, 1000);
+    setInterval(tickCD, 1000);
   </script>
 </body>
 </html>
