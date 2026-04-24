@@ -132,6 +132,20 @@
   <script>
     const SHEET_ID = '2PACX-1vRB2fzVzqprPx-YUlES2jFZqptHzI2jo3xUTMJEJvU4RlldllWERgO3pVkeTvtLvCkaq4GDB8cjsWqr';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
+    const DEFAULT_STATIONS = [
+      { name: "TotalEnergies — Nakasero",  zone: "Nakasero",    status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Shell — Kampala Road",       zone: "City Centre", status: "queue",     petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Stabex — Kabalagala",        zone: "Kabalagala",  status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "TotalEnergies — Ntinda",     zone: "Ntinda",      status: "empty",     petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Oryx — Bugolobi",            zone: "Bugolobi",    status: "queue",     petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Shell — Entebbe Road",       zone: "Makindye",    status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Stabex — Wandegeya",         zone: "Wandegeya",   status: "empty",     petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "TotalEnergies — Lugogo",     zone: "Lugogo",      status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Oryx — Naalya",              zone: "Naalya",      status: "queue",     petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Vivo Energy — Bukoto",       zone: "Bukoto",      status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "Shell — Makerere",           zone: "Makerere",    status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
+      { name: "TotalEnergies — Kireka",     zone: "Kireka",      status: "empty",     petrol: true, diesel: true, updated: "sample data", notes: "" },
+    ];
     let allStations = [];
     let zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
 
@@ -173,16 +187,11 @@
           stationMap[name] = { name, zone: area || 'Other', status: parseStatus(statusRaw), notes, updated: timeAgo(timestamp), petrol: true, diesel: true };
         });
         allStations = Object.values(stationMap);
-        if (allStations.length === 0) {
-          allStations = [
-            { name: "TotalEnergies — Nakasero", zone: "Nakasero", status: "available", petrol: true, diesel: true, updated: "sample", notes: "" },
-            { name: "Shell — Kampala Road", zone: "City Centre", status: "queue", petrol: true, diesel: false, updated: "sample", notes: "" },
-            { name: "Stabex — Kabalagala", zone: "Kabalagala", status: "empty", petrol: false, diesel: false, updated: "sample", notes: "" },
-          ];
-        }
+        if (allStations.length === 0) allStations = DEFAULT_STATIONS;
         renderZones(); render();
       } catch(e) {
-        document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load data. Please try again.</p></div>';
+        allStations = DEFAULT_STATIONS;
+        renderZones(); render();
       }
     }
 
