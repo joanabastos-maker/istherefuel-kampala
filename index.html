@@ -10,23 +10,44 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --yellow: #FCDC04; --green: #1A8A4A; --orange: #D97706; --red: #C0200A; --bg: #F7F5F0; --card: #fff; --text: #111; --muted: #666; --border: #E0DDD5; }
+    :root {
+      --yellow: #FCDC04; --green: #1A8A4A; --orange: #D97706; --red: #C0200A;
+      --bg: #F7F5F0; --card: #fff; --text: #111; --muted: #666; --border: #E0DDD5;
+      --header-bg: #000; --search-bg: #fff; --filter-bg: #fff;
+    }
+    body.dark {
+      --bg: #1a1a1a; --card: #242424; --text: #f0f0f0; --muted: #aaa; --border: #333;
+      --header-bg: #000; --search-bg: #2a2a2a; --filter-bg: #242424;
+    }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
-    header { background: #000; border-bottom: 3px solid var(--yellow); position: sticky; top: 0; z-index: 50; }
+    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; transition: background .3s, color .3s; }
+    header { background: var(--header-bg); border-bottom: 3px solid var(--yellow); position: sticky; top: 0; z-index: 50; }
     .header-inner { display: flex; align-items: center; justify-content: space-between; padding: 13px 20px; }
     .logo { display: flex; align-items: center; gap: 10px; }
     .flag { display: flex; flex-direction: column; width: 28px; height: 18px; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
     .flag div { flex: 1; }
     .logo h1 { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
     .logo h1 span { color: var(--yellow); }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .dark-btn { width: 36px; height: 20px; background: #333; border-radius: 10px; position: relative; cursor: pointer; border: none; flex-shrink: 0; transition: background .2s; }
+    .dark-btn::after { content: ''; position: absolute; width: 14px; height: 14px; background: #aaa; border-radius: 50%; top: 3px; left: 3px; transition: all .2s; }
+    body.dark .dark-btn { background: #FCDC04; }
+    body.dark .dark-btn::after { left: 19px; background: #000; }
     .meta { font-family: 'Space Mono', monospace; font-size: 10px; color: #999; text-align: right; line-height: 1.8; }
     .live-dot { display: inline-block; width: 6px; height: 6px; background: #4CAF50; border-radius: 50%; margin-right: 4px; animation: blink 1.4s infinite; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
     .update-bar { background: #0a0a0a; padding: 5px 20px; display: flex; justify-content: space-between; align-items: center; font-family: 'Space Mono', monospace; font-size: 10px; color: #555; }
     .refresh-btn { background: none; border: 1px solid #333; color: #555; font-size: 10px; font-family: 'Space Mono', monospace; padding: 3px 9px; border-radius: 3px; cursor: pointer; transition: all .2s; }
     .refresh-btn:hover { border-color: var(--yellow); color: var(--yellow); }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border-bottom: 1px solid var(--border); }
+    .search-bar { background: var(--search-bg); padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; transition: background .3s; }
+    .search-icon { font-size: 16px; flex-shrink: 0; }
+    .search-input { flex: 1; border: none; outline: none; font-family: 'Syne', sans-serif; font-size: 13px; color: var(--text); background: transparent; }
+    .search-input::placeholder { color: var(--muted); }
+    .near-me-btn { font-size: 11px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--yellow); background: var(--yellow); color: #000; cursor: pointer; white-space: nowrap; transition: all .2s; flex-shrink: 0; }
+    .near-me-btn:hover { background: #e6c800; }
+    .near-me-btn.active { background: #000; color: var(--yellow); border-color: #000; }
+    body.dark .near-me-btn.active { background: var(--yellow); color: #000; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--filter-bg); border-bottom: 1px solid var(--border); transition: background .3s; }
     .stt { padding: 14px 10px; text-align: center; border-right: 1px solid var(--border); }
     .stt:last-child { border-right: none; }
     .stt-n { font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; }
@@ -36,7 +57,7 @@
     .zones::-webkit-scrollbar { display: none; }
     .zbtn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; padding: 5px 13px; border-radius: 20px; border: 1px solid #333; background: none; color: #777; cursor: pointer; white-space: nowrap; transition: all .2s; }
     .zbtn.on { background: var(--yellow); color: #000; border-color: var(--yellow); }
-    .filters { padding: 10px 16px; display: flex; gap: 7px; flex-wrap: wrap; background: #fff; border-bottom: 1px solid var(--border); align-items: center; }
+    .filters { padding: 10px 16px; display: flex; gap: 7px; flex-wrap: wrap; background: var(--filter-bg); border-bottom: 1px solid var(--border); align-items: center; transition: background .3s; }
     .fbtn { font-size: 11px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 5px 12px; border-radius: 4px; border: 1.5px solid var(--border); background: none; color: var(--muted); cursor: pointer; transition: all .15s; }
     .fbtn.fa { background: #111; color: #fff; border-color: #111; }
     .fbtn.fg { background: var(--green); color: #fff; border-color: var(--green); }
@@ -46,9 +67,9 @@
     .ftog { font-size: 10px; font-weight: 700; font-family: 'Space Mono', monospace; padding: 5px 10px; border-radius: 3px; border: 1.5px solid var(--border); background: none; color: var(--muted); cursor: pointer; transition: all .15s; }
     .ftog.on { background: #111; color: var(--yellow); border-color: #111; }
     .list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-    .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; transition: box-shadow .2s; }
-    .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.08); }
-    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; transition: box-shadow .2s, background .3s; }
+    .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.1); }
+    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 0; }
     .card.available::before { background: var(--green); }
     .card.queue::before { background: var(--orange); }
     .card.empty::before { background: var(--red); }
@@ -62,21 +83,25 @@
     .cb { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
     .ftags { display: flex; gap: 5px; }
     .ftag { font-size: 9px; font-weight: 700; font-family: 'Space Mono', monospace; padding: 3px 7px; border-radius: 3px; background: #F0EDE6; color: #555; }
+    body.dark .ftag { background: #333; color: #aaa; }
     .ctime { font-size: 10px; color: #bbb; font-family: 'Space Mono', monospace; }
-    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .confirm-count { font-size: 10px; color: var(--green); font-family: 'Space Mono', monospace; }
+    .share-btn { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; cursor: pointer; background: none; border: none; padding: 0; transition: color .15s; }
+    .share-btn:hover { color: var(--yellow); }
+    .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
     .btn-confirm { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid #c8e6c9; background: #f1faf2; color: var(--green); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-confirm:hover { background: #c8e6c9; }
-    .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; color: #555; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
+    .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-change:hover { border-color: var(--orange); color: var(--orange); }
-    .confirm-count { font-size: 10px; font-family: 'Space Mono', monospace; }
-    .queue-time { font-size: 10px; color: var(--orange); font-family: 'Space Mono', monospace; text-align: center; margin-top: 4px; }
-    .empty { text-align: center; padding: 50px 20px; color: var(--muted); }
-    .empty-icon { font-size: 36px; margin-bottom: 10px; }
-    .empty p { font-size: 13px; margin-top: 6px; }
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+    .empty-state p { font-size: 13px; margin-top: 6px; }
     .loading { text-align: center; padding: 50px 20px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
-    .report-fab { position: fixed; bottom: 0; left: 0; right: 0; background: #000; color: var(--yellow); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; padding: 16px 22px; text-decoration: none; text-align: center; border-top: 3px solid var(--yellow); letter-spacing: 0.3px; transition: background .2s; z-index: 99; }
+    .report-fab { position: fixed; bottom: 0; left: 0; right: 0; background: #000; color: var(--yellow); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; padding: 16px 22px; text-decoration: none; text-align: center; border-top: 3px solid var(--yellow); z-index: 99; transition: background .2s; }
     .report-fab:hover { background: #1a1a1a; }
-    footer { text-align: center; padding: 16px 20px; font-size: 11px; color: #aaa; font-family: 'Space Mono', monospace; border-top: 1px solid var(--border); }
+    footer { text-align: center; padding: 16px 20px; font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; border-top: 1px solid var(--border); }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #111; color: #fff; font-family: 'Space Mono', monospace; font-size: 12px; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; white-space: nowrap; }
+    .toast.show { opacity: 1; }
     @media (max-width: 480px) { .logo h1 { font-size: 15px; } .stt-n { font-size: 22px; } .fuel-toggle { margin-left: 0; } .filters { gap: 5px; } }
   </style>
 </head>
@@ -91,9 +116,12 @@
         </div>
         <h1>Uganda <span>Fuel</span> Tracker</h1>
       </div>
-      <div class="meta">
-        <div><span class="live-dot"></span>LIVE</div>
-        <div id="clk">--:--</div>
+      <div class="header-right">
+        <button class="dark-btn" onclick="toggleDark()" title="Toggle dark mode"></button>
+        <div class="meta">
+          <div><span class="live-dot"></span>LIVE</div>
+          <div id="clk">--:--</div>
+        </div>
       </div>
     </div>
     <div class="update-bar">
@@ -101,6 +129,12 @@
       <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
     </div>
   </header>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search" placeholder="Search station or zone..." oninput="render()" />
+    <button class="near-me-btn" id="nearme-btn" onclick="toggleNearMe()">📍 Near me</button>
+  </div>
 
   <section class="stats">
     <div class="stt"><div class="stt-n g" id="ca">—</div><div class="stt-l">available</div></div>
@@ -122,34 +156,53 @@
   </div>
 
   <main class="list" id="list"><div class="loading">Loading stations...</div></main>
-
   <footer><p>Data is community-reported. Help keep it accurate.</p></footer>
 
-  <a class="report-fab"
-     href="https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform"
-     target="_blank" rel="noopener">
+  <a class="report-fab" href="https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform" target="_blank" rel="noopener">
     + Report a station
   </a>
+
+  <div class="toast" id="toast"></div>
 
   <script>
     const SHEET_ID = '2PACX-1vRB2fzVzqprPx-YUlES2jFZqptHzI2jo3xUTMJEJvU4RlldllWERg03pVkeTvtLvCkaq4GDB8cjsWqr';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
     const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform';
-    let allStations = [];
-    let zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
+    let allStations = [], zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
     const confirmations = {};
+    let userLat = null, userLng = null, nearMe = false;
+
+    function toggleDark() { document.body.classList.toggle('dark'); }
+
+    function toggleNearMe() {
+      if (!nearMe) {
+        if (!navigator.geolocation) { showToast('GPS not available on this device'); return; }
+        navigator.geolocation.getCurrentPosition(pos => {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          nearMe = true;
+          document.getElementById('nearme-btn').classList.add('active');
+          document.getElementById('nearme-btn').textContent = '📍 Near me ✓';
+          render();
+        }, () => { showToast('Could not get your location'); });
+      } else {
+        nearMe = false;
+        userLat = null; userLng = null;
+        document.getElementById('nearme-btn').classList.remove('active');
+        document.getElementById('nearme-btn').textContent = '📍 Near me';
+        render();
+      }
+    }
 
     function parseCSVRow(row) {
-      const cols = [];
-      let cur = '', inQ = false;
+      const cols = []; let cur = '', inQ = false;
       for (let i = 0; i < row.length; i++) {
         const c = row[i];
         if (c === '"') { inQ = !inQ; }
         else if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
         else { cur += c; }
       }
-      cols.push(cur.trim());
-      return cols;
+      cols.push(cur.trim()); return cols;
     }
 
     function parseStatus(raw) {
@@ -163,24 +216,32 @@
 
     function timeAgo(dateStr) {
       if (!dateStr) return { text: 'unknown', old: false };
-      const normalized = dateStr.replace(/\//g, '-');
-      const date = new Date(normalized);
+      const date = new Date(dateStr.replace(/\//g, '-'));
       if (isNaN(date)) return { text: 'recently', old: false };
       const diff = Math.floor((Date.now() - date) / 1000);
       let text;
       if (diff < 60) text = `${diff}s ago`;
       else if (diff < 3600) text = `${Math.floor(diff/60)} min ago`;
-      else {
-        const h = Math.floor(diff/3600);
-        const m = Math.floor((diff % 3600) / 60);
-        text = m > 0 ? `${h}h ${m}min ago` : `${h}h ago`;
-      }
+      else { const h = Math.floor(diff/3600), m = Math.floor((diff%3600)/60); text = m > 0 ? `${h}h ${m}min ago` : `${h}h ago`; }
       return { text, old: diff > 3600 };
     }
 
     function confirmStation(name) {
       confirmations[name] = (confirmations[name] || 0) + 1;
+      showToast('Thanks for confirming!');
       render();
+    }
+
+    function shareStation(name) {
+      const url = window.location.href.split('?')[0] + '?station=' + encodeURIComponent(name);
+      if (navigator.clipboard) { navigator.clipboard.writeText(url).then(() => showToast('Link copied!')); }
+      else { showToast('Link: ' + url); }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
     }
 
     async function loadData() {
@@ -192,74 +253,77 @@
         const stationMap = {};
         rows.forEach(row => {
           const cols = parseCSVRow(row);
-          const timestamp = cols[0] || '';
-          const name = cols[1] || '';
-          const area = cols[2] || '';
-          const statusRaw = cols[3] || '';
-          const notes = cols[4] || '';
+          const timestamp = cols[0]||'', name = cols[1]||'', area = cols[2]||'', statusRaw = cols[3]||'', notes = cols[4]||'';
           if (!name) return;
           const t = timeAgo(timestamp);
-          stationMap[name] = { name, zone: area || 'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old, petrol: true, diesel: true };
+          stationMap[name] = { name, zone: area||'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old };
         });
         allStations = Object.values(stationMap);
         if (allStations.length === 0) {
           allStations = [
-            { name: "TotalEnergies — Nakasero", zone: "Nakasero",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Shell — Kampala Road",     zone: "City Centre", status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Stabex — Kabalagala",      zone: "Kabalagala",  status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "TotalEnergies — Ntinda",   zone: "Ntinda",      status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Oryx — Bugolobi",          zone: "Bugolobi",    status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Shell — Entebbe Road",     zone: "Makindye",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Stabex — Wandegeya",       zone: "Wandegeya",   status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "TotalEnergies — Lugogo",   zone: "Lugogo",      status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Oryx — Naalya",            zone: "Naalya",      status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Vivo Energy — Bukoto",     zone: "Bukoto",      status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Shell — Makerere",         zone: "Makerere",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "TotalEnergies — Kireka",   zone: "Kireka",      status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            {name:"TotalEnergies — Nakasero",zone:"Nakasero",status:"available",updated:"sample",outdated:false,notes:""},
+            {name:"Shell — Kampala Road",zone:"City Centre",status:"queue",updated:"sample",outdated:false,notes:""},
+            {name:"Stabex — Kabalagala",zone:"Kabalagala",status:"available",updated:"sample",outdated:false,notes:""},
+            {name:"TotalEnergies — Ntinda",zone:"Ntinda",status:"empty",updated:"sample",outdated:false,notes:""},
+            {name:"Oryx — Bugolobi",zone:"Bugolobi",status:"queue",updated:"sample",outdated:false,notes:""},
+            {name:"Shell — Entebbe Road",zone:"Makindye",status:"available",updated:"sample",outdated:false,notes:""},
+            {name:"Stabex — Wandegeya",zone:"Wandegeya",status:"empty",updated:"sample",outdated:false,notes:""},
+            {name:"TotalEnergies — Lugogo",zone:"Lugogo",status:"available",updated:"sample",outdated:false,notes:""},
+            {name:"Oryx — Naalya",zone:"Naalya",status:"queue",updated:"sample",outdated:false,notes:""},
+            {name:"Vivo Energy — Bukoto",zone:"Bukoto",status:"available",updated:"sample",outdated:false,notes:""},
+            {name:"Shell — Makerere",zone:"Makerere",status:"available",updated:"sample",outdated:false,notes:""},
+            {name:"TotalEnergies — Kireka",zone:"Kireka",status:"empty",updated:"sample",outdated:false,notes:""},
           ];
         }
         renderZones(); render();
       } catch(e) {
-        document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load data. Please try again.</p></div>';
+        document.getElementById('list').innerHTML = '<div class="empty-state"><div style="font-size:36px">⚠️</div><p>Could not load data. Please try again.</p></div>';
       }
     }
 
     function renderZones() {
-      const zones = ["All zones", ...[...new Set(allStations.map(s => s.zone))].sort()];
-      document.getElementById('zones').innerHTML = zones.map(z => `<button class="zbtn${z===zone?' on':''}" onclick="setZone('${z}')">${z}</button>`).join('');
+      const zones = ["All zones", ...[...new Set(allStations.map(s=>s.zone))].sort()];
+      document.getElementById('zones').innerHTML = zones.map(z=>`<button class="zbtn${z===zone?' on':''}" onclick="setZone('${z}')">${z}</button>`).join('');
     }
 
     function setZone(z) { zone=z; renderZones(); render(); }
-    function setFilter(f, btn) { filter=f; document.querySelectorAll('.fbtn').forEach(b=>b.className='fbtn'); btn.classList.add(f==='all'?'fa':f==='available'?'fg':f==='queue'?'fo':'fr'); render(); }
+    function setFilter(f,btn) { filter=f; document.querySelectorAll('.fbtn').forEach(b=>b.className='fbtn'); btn.classList.add(f==='all'?'fa':f==='available'?'fg':f==='queue'?'fo':'fr'); render(); }
     function setFuel(f) { fuel=f; document.getElementById('fp').className='ftog'+(f==='petrol'?' on':''); document.getElementById('fd').className='ftog'+(f==='diesel'?' on':''); render(); }
 
     function render() {
-      const list = allStations.filter(s => {
+      const q = document.getElementById('search').value.toLowerCase();
+      let list = allStations.filter(s => {
         if (zone !== "All zones" && s.zone !== zone) return false;
         if (filter !== 'all' && s.status !== filter) return false;
+        if (q && !s.name.toLowerCase().includes(q) && !s.zone.toLowerCase().includes(q)) return false;
         return true;
       });
+      if (nearMe && userLat) list = list.sort((a,b) => (a.distKm||99) - (b.distKm||99));
       document.getElementById('ca').textContent = allStations.filter(s=>s.status==='available').length;
       document.getElementById('cq').textContent = allStations.filter(s=>s.status==='queue').length;
       document.getElementById('ce').textContent = allStations.filter(s=>s.status==='empty').length;
       const el = document.getElementById('list');
-      if (!list.length) { el.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><p>No stations found for this filter.</p></div>`; return; }
+      if (!list.length) { el.innerHTML=`<div class="empty-state"><div style="font-size:36px">⛽</div><p>No stations found.</p></div>`; return; }
       el.innerHTML = list.map(s => {
-        const badge = s.status==='available' ? `<span class="badge bav">✓ Available</span>` : s.status==='queue' ? `<span class="badge bqu">⏳ Queue</span>` : `<span class="badge bem">✕ Empty</span>`;
-        const notes = s.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>` : '';
+        const badge = s.status==='available'?`<span class="badge bav">✓ Available</span>`:s.status==='queue'?`<span class="badge bqu">⏳ Queue</span>`:`<span class="badge bem">✕ Empty</span>`;
+        const notes = s.notes?`<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>`:'';
         const timeLabel = s.outdated
-          ? `<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`
-          : `<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
-        const count = confirmations[s.name] || 0;
-        const safeName = s.name.replace(/'/g, "\\'");
-        const confirmBtn = `<button class="btn-confirm" onclick="confirmStation('${safeName}')">✓ Still the same${count > 0 ? ` <span class="confirm-count">(${count})</span>` : ''}</button>`;
-        const changeBtn = `<a class="btn-change" href="${FORM_URL}" target="_blank" rel="noopener">⚡ Situation changed?</a>`;
-        const queueTime = s.status === 'queue' ? `<div class="queue-time">⏱ ~15-30 min wait</div>` : '';
+          ?`<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`
+          :`<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
+        const count = confirmations[s.name]||0;
+        const distLabel = s.distKm ? `· ${s.distKm.toFixed(1)} km away` : '';
+        const safeName = s.name.replace(/'/g,"\\'");
         return `<article class="card ${s.status}">
-          <div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone}</div>${notes}</div>${badge}</div>
+          <div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone} ${distLabel}</div>${notes}</div>${badge}</div>
           <div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">${timeLabel}</div></div>
-          <div class="card-actions">${confirmBtn}${changeBtn}</div>
-          ${queueTime}
+          <div class="card-meta">
+            <span class="confirm-count">${count>0?`✓ ${count} confirmed`:''}</span>
+            <button class="share-btn" onclick="shareStation('${safeName}')">🔗 Share</button>
+          </div>
+          <div class="card-actions">
+            <button class="btn-confirm" onclick="confirmStation('${safeName}')">✓ Still the same${count>0?` (${count})`:''}</button>
+            <a class="btn-change" href="${FORM_URL}" target="_blank" rel="noopener">⚡ Situation changed?</a>
+          </div>
         </article>`;
       }).join('');
     }
@@ -267,14 +331,13 @@
     function tick() { document.getElementById('clk').textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
     function tickCD() {
       countdown--;
-      if (countdown <= 0) { countdown = 120; loadData(); }
-      const m = Math.floor(countdown/60), s = countdown%60;
-      document.getElementById('nxt').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      if (countdown<=0){countdown=120;loadData();}
+      const m=Math.floor(countdown/60),s=countdown%60;
+      document.getElementById('nxt').textContent=`${m}:${s.toString().padStart(2,'0')}`;
     }
 
     loadData(); tick();
-    setInterval(tick, 1000);
-    setInterval(tickCD, 1000);
+    setInterval(tick,1000); setInterval(tickCD,1000);
   </script>
 </body>
 </html>
