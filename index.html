@@ -94,6 +94,7 @@
     .btn-confirm:hover { background: #c8e6c9; }
     .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-change:hover { border-color: var(--orange); color: var(--orange); }
+
     .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
     .empty-state p { font-size: 13px; margin-top: 6px; }
     .loading { text-align: center; padding: 50px 20px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
@@ -172,25 +173,6 @@
     const confirmations = {};
     let userLat = null, userLng = null, nearMe = false;
 
-    const ZONE_COORDS = {
-      "Nakasero":    {lat:0.3176, lng:32.5811},
-      "City Centre": {lat:0.3136, lng:32.5811},
-      "Kabalagala":  {lat:0.2897, lng:32.5922},
-      "Ntinda":      {lat:0.3394, lng:32.6197},
-      "Bugolobi":    {lat:0.3097, lng:32.6069},
-      "Makindye":    {lat:0.2833, lng:32.5833},
-      "Wandegeya":   {lat:0.3397, lng:32.5697},
-      "Lugogo":      {lat:0.3272, lng:32.6044},
-      "Naalya":      {lat:0.3608, lng:32.6361},
-      "Bukoto":      {lat:0.3447, lng:32.5894},
-      "Makerere":    {lat:0.3394, lng:32.5669},
-      "Kireka":      {lat:0.3347, lng:32.6528},
-      "Kiwatule":    {lat:0.3350, lng:32.6300},
-      "Muyenga":     {lat:0.2950, lng:32.5980},
-      "Kololo":      {lat:0.3250, lng:32.5950},
-      "Other":       {lat:0.3200, lng:32.5800},
-    };
-
     function toggleDark() { document.body.classList.toggle('dark'); }
 
     function toggleNearMe() {
@@ -211,6 +193,12 @@
         document.getElementById('nearme-btn').textContent = '📍 Near me';
         render();
       }
+    }
+
+    function dist(lat1, lng1, lat2, lng2) {
+      const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     function parseCSVRow(row) {
@@ -243,16 +231,6 @@
       else if (diff < 3600) text = `${Math.floor(diff/60)} min ago`;
       else { const h = Math.floor(diff/3600), m = Math.floor((diff%3600)/60); text = m > 0 ? `${h}h ${m}min ago` : `${h}h ago`; }
       return { text, old: diff > 3600 };
-    }
-
-    function calcDistances() {
-      if (!userLat || !userLng) return;
-      allStations.forEach(s => {
-        const coords = (s.lat && s.lng) ? {lat:s.lat, lng:s.lng} : ZONE_COORDS[s.zone] || ZONE_COORDS["Other"];
-        const R=6371, dLat=(coords.lat-userLat)*Math.PI/180, dLng=(coords.lng-userLng)*Math.PI/180;
-        const a=Math.sin(dLat/2)**2+Math.cos(userLat*Math.PI/180)*Math.cos(coords.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-        s.distKm = R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-      });
     }
 
     function confirmStation(name) {
@@ -319,6 +297,35 @@
     function setFilter(f,btn) { filter=f; document.querySelectorAll('.fbtn').forEach(b=>b.className='fbtn'); btn.classList.add(f==='all'?'fa':f==='available'?'fg':f==='queue'?'fo':'fr'); render(); }
     function setFuel(f) { fuel=f; document.getElementById('fp').className='ftog'+(f==='petrol'?' on':''); document.getElementById('fd').className='ftog'+(f==='diesel'?' on':''); render(); }
 
+    const ZONE_COORDS = {
+      "Nakasero":    {lat:0.3176, lng:32.5811},
+      "City Centre": {lat:0.3136, lng:32.5811},
+      "Kabalagala":  {lat:0.2897, lng:32.5922},
+      "Ntinda":      {lat:0.3394, lng:32.6197},
+      "Bugolobi":    {lat:0.3097, lng:32.6069},
+      "Makindye":    {lat:0.2833, lng:32.5833},
+      "Wandegeya":   {lat:0.3397, lng:32.5697},
+      "Lugogo":      {lat:0.3272, lng:32.6044},
+      "Naalya":      {lat:0.3608, lng:32.6361},
+      "Bukoto":      {lat:0.3447, lng:32.5894},
+      "Makerere":    {lat:0.3394, lng:32.5669},
+      "Kireka":      {lat:0.3347, lng:32.6528},
+      "Kiwatule":    {lat:0.3350, lng:32.6300},
+      "Muyenga":     {lat:0.2950, lng:32.5980},
+      "Kololo":      {lat:0.3250, lng:32.5950},
+      "Other":       {lat:0.3200, lng:32.5800},
+    };
+
+    function calcDistances() {
+      if (!userLat || !userLng) return;
+      allStations.forEach(s => {
+        const coords = (s.lat && s.lng) ? {lat:s.lat, lng:s.lng} : ZONE_COORDS[s.zone] || ZONE_COORDS["Other"];
+        const R=6371, dLat=(coords.lat-userLat)*Math.PI/180, dLng=(coords.lng-userLng)*Math.PI/180;
+        const a=Math.sin(dLat/2)**2+Math.cos(userLat*Math.PI/180)*Math.cos(coords.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+        s.distKm = R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+      });
+    }
+
     function render() {
       const q = document.getElementById('search').value.toLowerCase();
       if (nearMe && userLat) calcDistances();
@@ -343,6 +350,7 @@
         const count = confirmations[s.name]||0;
         const distLabel = s.distKm ? `· ${s.distKm.toFixed(1)} km away` : '';
         const safeName = s.name.replace(/'/g,"\\'");
+        const queueBar = '';
         return `<article class="card ${s.status}">
           <div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone} ${distLabel}</div>${notes}</div>${badge}</div>
           <div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">${timeLabel}</div></div>
@@ -354,6 +362,7 @@
             <button class="btn-confirm" onclick="confirmStation('${safeName}')">✓ Still the same${count>0?` (${count})`:''}</button>
             <a class="btn-change" href="${FORM_URL}" target="_blank" rel="noopener">⚡ Situation changed?</a>
           </div>
+          ${queueBar}
         </article>`;
       }).join('');
     }
