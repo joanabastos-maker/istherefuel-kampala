@@ -132,20 +132,6 @@
   <script>
     const SHEET_ID = '2PACX-1vRB2fzVzqprPx-YUlES2jFZqptHzI2jo3xUTMJEJvU4RlldllWERgO3pVkeTvtLvCkaq4GDB8cjsWqr';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
-    const DEFAULT_STATIONS = [
-      { name: "TotalEnergies — Nakasero",  zone: "Nakasero",    status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Shell — Kampala Road",       zone: "City Centre", status: "queue",     petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Stabex — Kabalagala",        zone: "Kabalagala",  status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "TotalEnergies — Ntinda",     zone: "Ntinda",      status: "empty",     petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Oryx — Bugolobi",            zone: "Bugolobi",    status: "queue",     petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Shell — Entebbe Road",       zone: "Makindye",    status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Stabex — Wandegeya",         zone: "Wandegeya",   status: "empty",     petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "TotalEnergies — Lugogo",     zone: "Lugogo",      status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Oryx — Naalya",              zone: "Naalya",      status: "queue",     petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Vivo Energy — Bukoto",       zone: "Bukoto",      status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "Shell — Makerere",           zone: "Makerere",    status: "available", petrol: true, diesel: true, updated: "sample data", notes: "" },
-      { name: "TotalEnergies — Kireka",     zone: "Kireka",      status: "empty",     petrol: true, diesel: true, updated: "sample data", notes: "" },
-    ];
     let allStations = [];
     let zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
 
@@ -159,14 +145,19 @@
     }
 
     function timeAgo(dateStr) {
-      if (!dateStr) return 'unknown';
+      if (!dateStr) return { text: 'unknown', old: false };
       const date = new Date(dateStr);
-      if (isNaN(date)) return 'recently';
+      if (isNaN(date)) return { text: 'recently', old: false };
       const diff = Math.floor((Date.now() - date) / 1000);
-      if (diff < 60) return `${diff}s ago`;
-      if (diff < 3600) return `${Math.floor(diff/60)} min ago`;
-      if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-      return `${Math.floor(diff/86400)}d ago`;
+      let text;
+      if (diff < 60) text = `${diff}s ago`;
+      else if (diff < 3600) text = `${Math.floor(diff/60)} min ago`;
+      else {
+        const h = Math.floor(diff/3600);
+        const m = Math.floor((diff % 3600) / 60);
+        text = m > 0 ? `${h}h ${m}min ago` : `${h}h ago`;
+      }
+      return { text, old: diff > 3600 };
     }
 
     async function loadData() {
@@ -184,14 +175,29 @@
           const statusRaw = cols[3]?.replace(/"/g,'').trim();
           const notes = cols[4]?.replace(/"/g,'').trim();
           if (!name) return;
-          stationMap[name] = { name, zone: area || 'Other', status: parseStatus(statusRaw), notes, updated: timeAgo(timestamp), petrol: true, diesel: true };
+          const t = timeAgo(timestamp);
+          stationMap[name] = { name, zone: area || 'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old, petrol: true, diesel: true };
         });
         allStations = Object.values(stationMap);
-        if (allStations.length === 0) allStations = DEFAULT_STATIONS;
+        if (allStations.length === 0) {
+          allStations = [
+            { name: "TotalEnergies — Nakasero",  zone: "Nakasero",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Shell — Kampala Road",       zone: "City Centre", status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Stabex — Kabalagala",        zone: "Kabalagala",  status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "TotalEnergies — Ntinda",     zone: "Ntinda",      status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Oryx — Bugolobi",            zone: "Bugolobi",    status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Shell — Entebbe Road",       zone: "Makindye",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Stabex — Wandegeya",         zone: "Wandegeya",   status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "TotalEnergies — Lugogo",     zone: "Lugogo",      status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Oryx — Naalya",              zone: "Naalya",      status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Vivo Energy — Bukoto",       zone: "Bukoto",      status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "Shell — Makerere",           zone: "Makerere",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "TotalEnergies — Kireka",     zone: "Kireka",      status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+          ];
+        }
         renderZones(); render();
       } catch(e) {
-        allStations = DEFAULT_STATIONS;
-        renderZones(); render();
+        document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load data. Please try again.</p></div>';
       }
     }
 
@@ -218,7 +224,10 @@
       el.innerHTML = list.map(s => {
         const badge = s.status==='available' ? `<span class="badge bav">✓ Available</span>` : s.status==='queue' ? `<span class="badge bqu">⏳ Queue</span>` : `<span class="badge bem">✕ Empty</span>`;
         const notes = s.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>` : '';
-        return `<article class="card ${s.status}"><div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone}</div>${notes}</div>${badge}</div><div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">updated ${s.updated}</div></div></article>`;
+        const timeLabel = s.outdated
+          ? `<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`
+          : `<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
+        return `<article class="card ${s.status}"><div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone}</div>${notes}</div>${badge}</div><div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">${timeLabel}</div></div></article>`;
       }).join('');
     }
 
