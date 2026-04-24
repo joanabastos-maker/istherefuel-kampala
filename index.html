@@ -10,7 +10,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --yellow: #FCDC04; --green: #1A8A4A; --orange: #D97706; --red: #C0200A; --bg: #F7F5F0; --card: #fff; --text: #111; --muted: #666; --border: #E0DDD5; }
+    :root {
+      --yellow: #FCDC04;
+      --green: #1A8A4A;
+      --orange: #D97706;
+      --red: #C0200A;
+      --bg: #F7F5F0;
+      --card: #fff;
+      --text: #111;
+      --muted: #666;
+      --border: #E0DDD5;
+    }
     html { scroll-behavior: smooth; }
     body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     header { background: #000; border-bottom: 3px solid var(--yellow); position: sticky; top: 0; z-index: 50; }
@@ -70,7 +80,12 @@
     .report-fab { display: block; background: #000; color: var(--yellow); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; padding: 18px 22px; text-decoration: none; text-align: center; border-top: 3px solid var(--yellow); letter-spacing: 0.3px; transition: background .2s; }
     .report-fab:hover { background: #1a1a1a; }
     footer { text-align: center; padding: 16px 20px; font-size: 11px; color: #aaa; font-family: 'Space Mono', monospace; border-top: 1px solid var(--border); }
-    @media (max-width: 480px) { .logo h1 { font-size: 15px; } .stt-n { font-size: 22px; } .fuel-toggle { margin-left: 0; } .filters { gap: 5px; } }
+    @media (max-width: 480px) {
+      .logo h1 { font-size: 15px; }
+      .stt-n { font-size: 22px; }
+      .fuel-toggle { margin-left: 0; }
+      .filters { gap: 5px; }
+    }
   </style>
 </head>
 <body>
@@ -125,28 +140,33 @@
 
   <a class="report-fab"
      href="https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform"
-     target="_blank" rel="noopener">
+     target="_blank"
+     rel="noopener">
     + Report a station
   </a>
 
   <script>
+    // Google Sheet published CSV URL
     const SHEET_ID = '2PACX-1vRB2fzVzqprPx-YUlES2jFZqptHzI2jo3xUTMJEJvU4RlldllWERgO3pVkeTvtLvCkaq4GDB8cjsWqr';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
+
     let allStations = [];
     let zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
 
     function parseStatus(raw) {
       if (!raw) return 'empty';
       const s = raw.toLowerCase();
-      if (s.includes('no queue') || (s.includes('available') && !s.includes('queue'))) return 'available';
-      if (s.includes('queue') || s.includes('with queue')) return 'queue';
-      if (s.includes('empty') || s.includes('out')) return 'empty';
+      if (s.includes('no queue') || s.includes('sem fila') || s.includes('available') && !s.includes('queue')) return 'available';
+      if (s.includes('queue') || s.includes('fila') || s.includes('with queue')) return 'queue';
+      if (s.includes('empty') || s.includes('esgotado') || s.includes('out')) return 'empty';
       return 'empty';
     }
 
     function timeAgo(dateStr) {
       if (!dateStr) return { text: 'unknown', old: false };
-      const date = new Date(dateStr);
+      // Handle format: 2026/04/24 13:18:26 → replace slashes with dashes
+      const normalized = dateStr.replace(/\//g, '-');
+      const date = new Date(normalized);
       if (isNaN(date)) return { text: 'recently', old: false };
       const diff = Math.floor((Date.now() - date) / 1000);
       let text;
@@ -165,7 +185,9 @@
         document.getElementById('list').innerHTML = '<div class="loading">Loading stations...</div>';
         const res = await fetch(CSV_URL);
         const text = await res.text();
-        const rows = text.trim().split('\n').slice(1);
+        const rows = text.trim().split('\n').slice(1); // skip header
+
+        // Group by station — keep only the most recent report per station
         const stationMap = {};
         rows.forEach(row => {
           const cols = row.split(',');
@@ -175,34 +197,42 @@
           const statusRaw = cols[3]?.replace(/"/g,'').trim();
           const notes = cols[4]?.replace(/"/g,'').trim();
           if (!name) return;
+          // Keep most recent (rows are in order, last one wins)
           const t = timeAgo(timestamp);
           stationMap[name] = { name, zone: area || 'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old, petrol: true, diesel: true };
         });
+
         allStations = Object.values(stationMap);
+
+        // If no data yet, show placeholder stations
+        const defaultZones = ["Nakasero","City Centre","Kabalagala","Ntinda","Bugolobi","Makindye","Wandegeya","Lugogo","Naalya","Bukoto","Makerere","Kireka"];
         if (allStations.length === 0) {
           allStations = [
-            { name: "TotalEnergies — Nakasero",  zone: "Nakasero",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Shell — Kampala Road",       zone: "City Centre", status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Stabex — Kabalagala",        zone: "Kabalagala",  status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "TotalEnergies — Ntinda",     zone: "Ntinda",      status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Oryx — Bugolobi",            zone: "Bugolobi",    status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Shell — Entebbe Road",       zone: "Makindye",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Stabex — Wandegeya",         zone: "Wandegeya",   status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "TotalEnergies — Lugogo",     zone: "Lugogo",      status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Oryx — Naalya",              zone: "Naalya",      status: "queue",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Vivo Energy — Bukoto",       zone: "Bukoto",      status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "Shell — Makerere",           zone: "Makerere",    status: "available", petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
-            { name: "TotalEnergies — Kireka",     zone: "Kireka",      status: "empty",     petrol: true, diesel: true, updated: "sample data", outdated: false, notes: "" },
+            { name: "TotalEnergies — Nakasero",  zone: "Nakasero",    status: "available", petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Shell — Kampala Road",       zone: "City Centre", status: "queue",     petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Stabex — Kabalagala",        zone: "Kabalagala",  status: "available", petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "TotalEnergies — Ntinda",     zone: "Ntinda",      status: "empty",     petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Oryx — Bugolobi",            zone: "Bugolobi",    status: "queue",     petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Shell — Entebbe Road",       zone: "Makindye",    status: "available", petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Stabex — Wandegeya",         zone: "Wandegeya",   status: "empty",     petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "TotalEnergies — Lugogo",     zone: "Lugogo",      status: "available", petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Oryx — Naalya",              zone: "Naalya",      status: "queue",     petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Vivo Energy — Bukoto",       zone: "Bukoto",      status: "available", petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "Shell — Makerere",           zone: "Makerere",    status: "available", petrol: true,  diesel: true,  updated: "sample data", notes: "" },
+            { name: "TotalEnergies — Kireka",     zone: "Kireka",      status: "empty",     petrol: true,  diesel: true,  updated: "sample data", notes: "" },
           ];
         }
-        renderZones(); render();
+
+        renderZones();
+        render();
       } catch(e) {
         document.getElementById('list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Could not load data. Please try again.</p></div>';
       }
     }
 
     function renderZones() {
-      const zones = ["All zones", ...[...new Set(allStations.map(s => s.zone))].sort()];
+      const zoneList = allStations.length > 0 ? [...new Set(allStations.map(s => s.zone))].sort() : defaultZones;
+      const zones = ["All zones", ...zoneList];
       document.getElementById('zones').innerHTML = zones.map(z => `<button class="zbtn${z===zone?' on':''}" onclick="setZone('${z}')">${z}</button>`).join('');
     }
 
@@ -216,18 +246,30 @@
         if (filter !== 'all' && s.status !== filter) return false;
         return true;
       });
+
       document.getElementById('ca').textContent = allStations.filter(s=>s.status==='available').length;
       document.getElementById('cq').textContent = allStations.filter(s=>s.status==='queue').length;
       document.getElementById('ce').textContent = allStations.filter(s=>s.status==='empty').length;
+
       const el = document.getElementById('list');
       if (!list.length) { el.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><p>No stations found for this filter.</p></div>`; return; }
       el.innerHTML = list.map(s => {
         const badge = s.status==='available' ? `<span class="badge bav">✓ Available</span>` : s.status==='queue' ? `<span class="badge bqu">⏳ Queue</span>` : `<span class="badge bem">✕ Empty</span>`;
         const notes = s.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>` : '';
-        const timeLabel = s.outdated
-          ? `<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`
-          : `<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
-        return `<article class="card ${s.status}"><div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone}</div>${notes}</div>${badge}</div><div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">${timeLabel}</div></div></article>`;
+        return `<article class="card ${s.status}">
+          <div class="ct">
+            <div>
+              <div class="cn">${s.name}</div>
+              <div class="ca">${s.zone}</div>
+              ${notes}
+            </div>
+            ${badge}
+          </div>
+          <div class="cb">
+            <div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div>
+            <div class="ctime">updated ${s.updated}</div>
+          </div>
+        </article>`;
       }).join('');
     }
 
@@ -239,7 +281,8 @@
       document.getElementById('nxt').textContent = `${m}:${s.toString().padStart(2,'0')}`;
     }
 
-    loadData(); tick();
+    loadData();
+    tick();
     setInterval(tick, 1000);
     setInterval(tickCD, 1000);
   </script>
