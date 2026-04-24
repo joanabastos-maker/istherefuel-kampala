@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Is There Fuel — Kampala</title>
+  <meta name="description" content="Live fuel availability tracker for Kampala, Uganda. Find petrol and diesel stations near you." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --yellow: #FCDC04;
+      --green: #1A8A4A;
+      --orange: #D97706;
+      --red: #C0200A;
+      --bg: #F7F5F0;
+      --card: #fff;
+      --text: #111;
+      --muted: #666;
+      --border: #E0DDD5;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 90px;
+    }
+
+    /* ── HEADER ── */
+    header { background: #000; border-bottom: 3px solid var(--yellow); position: sticky; top: 0; z-index: 50; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; padding: 13px 20px; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .flag { display: flex; flex-direction: column; width: 28px; height: 18px; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .flag div { flex: 1; }
+    .logo h1 { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+    .logo h1 span { color: var(--yellow); }
+    .meta { font-family: 'Space Mono', monospace; font-size: 10px; color: #999; text-align: right; line-height: 1.8; }
+    .live-dot { display: inline-block; width: 6px; height: 6px; background: #4CAF50; border-radius: 50%; margin-right: 4px; animation: blink 1.4s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+    .update-bar {
+      background: #0a0a0a;
+      padding: 5px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #555;
+    }
+    .refresh-btn {
+      background: none;
+      border: 1px solid #333;
+      color: #555;
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+      padding: 3px 9px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .refresh-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+    /* ── ZONE BAR ── */
+    .zones {
+      background: #111;
+      padding: 9px 20px;
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      border-bottom: 1px solid #1e1e1e;
+      -webkit-overflow-scrolling: touch;
+    }
+    .zones::-webkit-scrollbar { display: none; }
+    .zbtn {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1px solid #333;
+      background: none;
+      color: #777;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .2s;
+    }
+    .zbtn.on { background: var(--yellow); color: #000; border-color: var(--yellow); }
+
+    /* ── STATS ── */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border-bottom: 1px solid var(--border); }
+    .stt { padding: 14px 10px; text-align: center; border-right: 1px solid var(--border); }
+    .stt:last-child { border-right: none; }
+    .stt-n { font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; }
+    .stt-l { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .6px; }
+    .g { color: var(--green); }
+    .o { color: var(--orange); }
+    .r { color: var(--red); }
+
+    /* ── FILTERS ── */
+    .filters {
+      padding: 10px 16px;
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .fbtn {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1.5px solid var(--border);
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .fbtn.fa { background: #111; color: #fff; border-color: #111; }
+    .fbtn.fg { background: var(--green); color: #fff; border-color: var(--green); }
+    .fbtn.fo { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .fbtn.fr { background: var(--red); color: #fff; border-color: var(--red); }
+    .fuel-toggle { margin-left: auto; display: flex; gap: 4px; }
+    .ftog {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      padding: 5px 10px;
+      border-radius: 3px;
+      border: 1.5px solid var(--border);
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .ftog.on { background: #111; color: var(--yellow); border-color: #111; }
+
+    /* ── STATION LIST ── */
+    .list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow .2s, transform .15s;
+    }
+    .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
+    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 0; }
+    .card.available::before { background: var(--green); }
+    .card.queue::before { background: var(--orange); }
+    .card.empty::before { background: var(--red); }
+    .ct { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .cn { font-size: 14px; font-weight: 700; line-height: 1.3; }
+    .ca { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; font-family: 'Space Mono', monospace; flex-shrink: 0; }
+    .bav { background: #E8F5EE; color: var(--green); }
+    .bqu { background: #FFF3E0; color: var(--orange); }
+    .bem { background: #FDECEA; color: var(--red); }
+    .cb { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .ftags { display: flex; gap: 5px; }
+    .ftag { font-size: 9px; font-weight: 700; font-family: 'Space Mono', monospace; padding: 3px 7px; border-radius: 3px; background: #F0EDE6; color: #555; }
+    .ctime { font-size: 10px; color: #bbb; font-family: 'Space Mono', monospace; }
+
+    /* ── EMPTY STATE ── */
+    .empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+    .empty-icon { font-size: 36px; margin-bottom: 10px; }
+    .empty p { font-size: 13px; }
+
+    /* ── REPORT FAB ── */
+    .report-fab {
+      position: fixed;
+      bottom: 22px;
+      right: 20px;
+      background: #000;
+      color: var(--yellow);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 13px 22px;
+      border-radius: 30px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.35);
+      z-index: 100;
+      transition: background .2s, transform .15s;
+    }
+    .report-fab:hover { background: #1a1a1a; transform: translateY(-2px); }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px 20px 30px;
+      font-size: 11px;
+      color: #aaa;
+      font-family: 'Space Mono', monospace;
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+    }
+    footer a { color: #888; text-decoration: underline; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 480px) {
+      .logo h1 { font-size: 15px; }
+      .stt-n { font-size: 22px; }
+      .fuel-toggle { margin-left: 0; }
+      .filters { gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="flag" aria-hidden="true">
+          <div style="background:#222"></div>
+          <div style="background:#FCDC04"></div>
+          <div style="background:#D90000"></div>
+          <div style="background:#222"></div>
+          <div style="background:#FCDC04"></div>
+          <div style="background:#D90000"></div>
+        </div>
+        <h1>Is There <span>Fuel</span> — Kampala</h1>
+      </div>
+      <div class="meta">
+        <div><span class="live-dot" aria-hidden="true"></span>LIVE</div>
+        <div id="clk" aria-live="polite">--:--</div>
+      </div>
+    </div>
+    <div class="update-bar">
+      <span>next update: <span id="nxt">2:00</span></span>
+      <button class="refresh-btn" onclick="refreshData()" aria-label="Refresh data">↻ Refresh</button>
+    </div>
+  </header>
+
+  <nav class="zones" id="zones" aria-label="Filter by zone"></nav>
+
+  <section class="stats" aria-label="Summary">
+    <div class="stt"><div class="stt-n g" id="ca">0</div><div class="stt-l">available</div></div>
+    <div class="stt"><div class="stt-n o" id="cq">0</div><div class="stt-l">queue</div></div>
+    <div class="stt"><div class="stt-n r" id="ce">0</div><div class="stt-l">empty</div></div>
+  </section>
+
+  <div class="filters" role="group" aria-label="Filter stations">
+    <button class="fbtn fa" onclick="setFilter('all',this)">All</button>
+    <button class="fbtn" onclick="setFilter('available',this)">Available</button>
+    <button class="fbtn" onclick="setFilter('queue',this)">Queue</button>
+    <button class="fbtn" onclick="setFilter('empty',this)">Empty</button>
+    <div class="fuel-toggle" role="group" aria-label="Fuel type">
+      <button class="ftog on" id="fp" onclick="setFuel('petrol')">PETROL</button>
+      <button class="ftog" id="fd" onclick="setFuel('diesel')">DIESEL</button>
+    </div>
+  </div>
+
+  <main class="list" id="list" aria-live="polite" aria-label="Station list"></main>
+
+  <footer>
+    <p>Data is community-reported. Help keep it accurate.</p>
+    <p style="margin-top:6px"><a href="https://docs.google.com/forms/d/e/1FAIpQLSfv-UJyaqEVK3CF_c9yQaq1iE6Lr4dHmJhd0nU9DGRYhLxcCQ/viewform" target="_blank" rel="noopener">Report a station via Google Form</a></p>
+  </footer>
+
+  <a class="report-fab"
+     href="https://docs.google.com/forms/d/e/1FAIpQLSfv-UJyaqEVK3CF_c9yQaq1iE6Lr4dHmJhd0nU9DGRYhLxcCQ/viewform"
+     target="_blank"
+     rel="noopener"
+     aria-label="Report a fuel station">
+    + Report a station
+  </a>
+
+  <script>
+    // ── Station data (replace / extend as needed) ──
+    const stations = [
+      { name: "TotalEnergies — Nakasero",    brand: "TotalEnergies", zone: "Nakasero",    status: "available", petrol: true,  diesel: true,  updated: "5 min ago",    address: "Nakasero Road" },
+      { name: "Shell — Kampala Road",         brand: "Shell",         zone: "City Centre", status: "queue",     petrol: true,  diesel: false, updated: "12 min ago",   address: "Kampala Road" },
+      { name: "Stabex — Kabalagala",          brand: "Stabex",        zone: "Kabalagala",  status: "available", petrol: true,  diesel: true,  updated: "3 min ago",    address: "Gaba Road" },
+      { name: "TotalEnergies — Ntinda",       brand: "TotalEnergies", zone: "Ntinda",      status: "empty",     petrol: false, diesel: false, updated: "45 min ago",   address: "Ntinda Complex" },
+      { name: "Oryx — Bugolobi",              brand: "Oryx",          zone: "Bugolobi",    status: "queue",     petrol: true,  diesel: true,  updated: "8 min ago",    address: "Bugolobi Flats Rd" },
+      { name: "Shell — Entebbe Road",         brand: "Shell",         zone: "Makindye",    status: "available", petrol: true,  diesel: true,  updated: "2 min ago",    address: "Entebbe Road" },
+      { name: "Stabex — Wandegeya",           brand: "Stabex",        zone: "Wandegeya",   status: "empty",     petrol: false, diesel: false, updated: "1h 20min ago", address: "Bombo Road" },
+      { name: "TotalEnergies — Lugogo",       brand: "TotalEnergies", zone: "Lugogo",      status: "available", petrol: true,  diesel: true,  updated: "15 min ago",   address: "Lugogo Bypass" },
+      { name: "Oryx — Naalya",                brand: "Oryx",          zone: "Naalya",      status: "queue",     petrol: true,  diesel: false, updated: "20 min ago",   address: "Naalya Road" },
+      { name: "Vivo Energy — Bukoto",         brand: "Vivo Energy",   zone: "Bukoto",      status: "available", petrol: true,  diesel: true,  updated: "7 min ago",    address: "Bukoto Street" },
+      { name: "Shell — Makerere",             brand: "Shell",         zone: "Makerere",    status: "available", petrol: true,  diesel: false, updated: "10 min ago",   address: "Makerere Hill Rd" },
+      { name: "TotalEnergies — Kireka",       brand: "TotalEnergies", zone: "Kireka",      status: "empty",     petrol: false, diesel: false, updated: "2h ago",       address: "Jinja Road" },
+    ];
+
+    const allZones = ["All zones", ...[...new Set(stations.map(s => s.zone))].sort()];
+    let zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
+
+    function renderZones() {
+      document.getElementById('zones').innerHTML = allZones
+        .map(z => `<button class="zbtn${z === zone ? ' on' : ''}" onclick="setZone('${z}')">${z}</button>`)
+        .join('');
+    }
+
+    function setZone(z) { zone = z; renderZones(); render(); }
+
+    function setFilter(f, btn) {
+      filter = f;
+      document.querySelectorAll('.fbtn').forEach(b => b.className = 'fbtn');
+      btn.classList.add(f === 'all' ? 'fa' : f === 'available' ? 'fg' : f === 'queue' ? 'fo' : 'fr');
+      render();
+    }
+
+    function setFuel(f) {
+      fuel = f;
+      document.getElementById('fp').className = 'ftog' + (f === 'petrol' ? ' on' : '');
+      document.getElementById('fd').className = 'ftog' + (f === 'diesel' ? ' on' : '');
+      render();
+    }
+
+    function render() {
+      const list = stations.filter(s => {
+        if (zone !== "All zones" && s.zone !== zone) return false;
+        if (filter !== 'all' && s.status !== filter) return false;
+        if (fuel === 'petrol' && !s.petrol) return false;
+        if (fuel === 'diesel' && !s.diesel) return false;
+        return true;
+      });
+
+      document.getElementById('ca').textContent = stations.filter(s => s.status === 'available').length;
+      document.getElementById('cq').textContent = stations.filter(s => s.status === 'queue').length;
+      document.getElementById('ce').textContent = stations.filter(s => s.status === 'empty').length;
+
+      const el = document.getElementById('list');
+      if (!list.length) {
+        el.innerHTML = `<div class="empty"><div class="empty-icon">⛽</div><p>No stations found for this filter.</p></div>`;
+        return;
+      }
+      el.innerHTML = list.map(s => {
+        const badge = s.status === 'available'
+          ? `<span class="badge bav">✓ Available</span>`
+          : s.status === 'queue'
+          ? `<span class="badge bqu">⏳ Queue</span>`
+          : `<span class="badge bem">✕ Empty</span>`;
+        const tags = (s.petrol ? '<span class="ftag">PETROL</span>' : '') + (s.diesel ? '<span class="ftag">DIESEL</span>' : '');
+        return `
+          <article class="card ${s.status}">
+            <div class="ct">
+              <div>
+                <div class="cn">${s.name}</div>
+                <div class="ca">${s.address} · ${s.zone}</div>
+              </div>
+              ${badge}
+            </div>
+            <div class="cb">
+              <div class="ftags">${tags}</div>
+              <div class="ctime">updated ${s.updated}</div>
+            </div>
+          </article>`;
+      }).join('');
+    }
+
+    function refreshData() {
+      countdown = 120;
+      const el = document.getElementById('list');
+      el.style.opacity = '.4';
+      setTimeout(() => { el.style.opacity = '1'; render(); }, 500);
+    }
+
+    function tick() {
+      document.getElementById('clk').textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function tickCD() {
+      countdown--;
+      if (countdown <= 0) { countdown = 120; refreshData(); }
+      const m = Math.floor(countdown / 60), s = countdown % 60;
+      document.getElementById('nxt').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    renderZones();
+    render();
+    tick();
+    setInterval(tick, 1000);
+    setInterval(tickCD, 1000);
+  </script>
+</body>
+</html>
