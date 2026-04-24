@@ -152,7 +152,7 @@
       if (!raw) return 'empty';
       const s = raw.toLowerCase().trim();
       if (s === 'empty' || s.includes('out of fuel') || s.includes('esgotado')) return 'empty';
-      if (s.includes('with queue') || s.includes('com fila') || (s.includes('available') && s.includes('queue'))) return 'queue';
+      if (s.includes('with queue') || s.includes('com fila')) return 'queue';
       if (s.includes('available') || s.includes('no queue') || s.includes('sem fila')) return 'available';
       return 'empty';
     }
