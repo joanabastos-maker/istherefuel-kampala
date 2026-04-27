@@ -169,7 +169,7 @@
     const SHEET_ID = '2PACX-1vRB2fzVzqprPx-YUlES2jFZqptHzI2jo3xUTMJEJvU4RlldllWERg03pVkeTvtLvCkaq4GDB8cjsWqr';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
     const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform';
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyp_8r9H6pRnatio0uZL9qePWgZByC8IYOzrRlD7fQQskpF7AsK9UwCyC2sgQe782jz/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhy_i536If5FpTzTT_RnXfonoA_7DAmG8BoM4pMdwkMf7Si9IB0I7KRCjaMEwUOeKN/exec';
 
     let allStations = [], zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
     // Use index-based confirmations to avoid name matching issues
@@ -258,18 +258,32 @@
     }
 
     // Use index to avoid any name-matching issues
-    function confirmStation(idx) {
+    async function confirmStation(idx) {
       const s = allStations[idx];
       if (!s) return;
+
       // Update immediately in memory
       s.updated = 'just now';
       s.outdated = false;
       confirmations[idx] = (confirmations[idx] || 0) + 1;
       showToast('✓ Thanks! Updated to just now.');
       render();
-      // Send to sheet via GET (works reliably with no-cors)
-      const params = '?name=' + encodeURIComponent(s.name) + '&zone=' + encodeURIComponent(s.zone) + '&status=' + encodeURIComponent(s.status);
-      fetch(SCRIPT_URL + params, { mode: 'no-cors' }).catch(() => {});
+
+      // Send the confirmation to Google Sheets
+      const params =
+        '?name=' + encodeURIComponent(s.name) +
+        '&zone=' + encodeURIComponent(s.zone) +
+        '&status=' + encodeURIComponent(s.status) +
+        '&timestamp=' + encodeURIComponent(new Date().toISOString());
+
+      try {
+        await fetch(SCRIPT_URL + params, { mode: 'no-cors' });
+
+        // Reload data after a short delay so the latest confirmation can appear after the Sheet updates
+        setTimeout(loadData, 1500);
+      } catch (e) {
+        showToast('Saved locally, but not synced.');
+      }
     }
 
     function shareStation(name) {
