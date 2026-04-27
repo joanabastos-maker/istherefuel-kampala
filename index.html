@@ -257,27 +257,22 @@
       });
     }
 
-    async function confirmStation(name, zone, status, btnEl) {
-      btnEl.disabled = true;
-      btnEl.textContent = '⏳ Saving...';
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({name, zone, status})
-        });
-        confirmations[name] = (confirmations[name] || 0) + 1;
-        // Update timestamp locally to "just now"
-        const station = allStations.find(s => s.name === name);
-        if (station) { station.updated = 'just now'; station.outdated = false; }
-        showToast('✓ Confirmed! Updated to just now.');
-        render();
-      } catch(e) {
-        showToast('Could not save. Please try again.');
-        btnEl.disabled = false;
-        btnEl.textContent = '✓ Still the same';
-      }
+    function confirmStation(idx) {
+      const s = allStations[idx];
+      if (!s) return;
+      // Update immediately — no waiting
+      confirmations[s.name] = (confirmations[s.name] || 0) + 1;
+      s.updated = 'just now';
+      s.outdated = false;
+      showToast('✓ Confirmed! Updated to just now.');
+      render();
+      // Send to sheet in background
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: s.name, zone: s.zone, status: s.status})
+      }).catch(e => console.log('Background save:', e));
     }
 
     function shareStation(name) {
@@ -353,7 +348,8 @@
       document.getElementById('ce').textContent = allStations.filter(s=>s.status==='empty').length;
       const el = document.getElementById('list');
       if (!list.length) { el.innerHTML=`<div class="empty-state"><div style="font-size:36px">⛽</div><p>No stations found.</p></div>`; return; }
-      el.innerHTML = list.map(s => {
+      el.innerHTML = list.map((s, i) => {
+        const idx = allStations.indexOf(s);
         const badge = s.status==='available'?`<span class="badge bav">✓ Available</span>`:s.status==='queue'?`<span class="badge bqu">⏳ Queue</span>`:`<span class="badge bem">✕ Empty</span>`;
         const notes = s.notes?`<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>`:'';
         const timeLabel = s.outdated
@@ -362,8 +358,6 @@
         const count = confirmations[s.name]||0;
         const distLabel = s.distKm ? `· ${s.distKm.toFixed(1)} km away` : '';
         const safeName = s.name.replace(/'/g,"\\'");
-        const safeZone = s.zone.replace(/'/g,"\\'");
-        const safeStatus = s.status.replace(/'/g,"\\'");
         return `<article class="card ${s.status}">
           <div class="ct"><div><div class="cn">${s.name}</div><div class="ca">${s.zone} ${distLabel}</div>${notes}</div>${badge}</div>
           <div class="cb"><div class="ftags"><span class="ftag">PETROL</span><span class="ftag">DIESEL</span></div><div class="ctime">${timeLabel}</div></div>
@@ -372,7 +366,7 @@
             <button class="share-btn" onclick="shareStation('${safeName}')">🔗 Share</button>
           </div>
           <div class="card-actions">
-            <button class="btn-confirm" onclick="confirmStation('${safeName}','${safeZone}','${safeStatus}',this)">✓ Still the same${count>0?` (${count})`:''}</button>
+            <button class="btn-confirm" onclick="confirmStation(${idx})">✓ Still the same${count>0?` (${count})`:''}</button>
             <a class="btn-change" href="${FORM_URL}" target="_blank" rel="noopener">⚡ Situation changed?</a>
           </div>
         </article>`;
