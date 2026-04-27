@@ -69,7 +69,7 @@
     .list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; transition: box-shadow .2s, background .3s; }
     .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.1); }
-    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 0; }
     .card.available::before { background: var(--green); }
     .card.queue::before { background: var(--orange); }
     .card.empty::before { background: var(--red); }
@@ -90,9 +90,10 @@
     .share-btn { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; cursor: pointer; background: none; border: none; padding: 0; transition: color .15s; }
     .share-btn:hover { color: var(--yellow); }
     .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-    .btn-confirm { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid #c8e6c9; background: #f1faf2; color: var(--green); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
+    .btn-confirm { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid #c8e6c9; background: #f1faf2; color: var(--green); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-confirm:hover { background: #c8e6c9; }
-    .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
+    .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-change:hover { border-color: var(--orange); color: var(--orange); }
     .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
     .empty-state p { font-size: 13px; margin-top: 6px; }
@@ -169,10 +170,10 @@
     const CSV_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?output=csv`;
     const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdAV-Yqx9CZR06lknFyyOkbIdkOSzB6ZWM2BxCcwlwfwNuKmQ/viewform';
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyp_8r9H6pRnatio0uZL9qePWgZByC8IYOzrRlD7fQQskpF7AsK9UwCyC2sgQe782jz/exec';
+
     let allStations = [], zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
+    // Use index-based confirmations to avoid name matching issues
     const confirmations = {};
-    // Store local confirmation timestamps
-    const confirmTimes = {};
     let userLat = null, userLng = null, nearMe = false;
 
     const ZONE_COORDS = {
@@ -200,8 +201,7 @@
       if (!nearMe) {
         if (!navigator.geolocation) { showToast('GPS not available on this device'); return; }
         navigator.geolocation.getCurrentPosition(pos => {
-          userLat = pos.coords.latitude;
-          userLng = pos.coords.longitude;
+          userLat = pos.coords.latitude; userLng = pos.coords.longitude;
           nearMe = true;
           document.getElementById('nearme-btn').classList.add('active');
           document.getElementById('nearme-btn').textContent = '📍 Near me ✓';
@@ -247,15 +247,6 @@
       return { text, old: diff > 3600 };
     }
 
-    function liveTimeAgo(ts) {
-      // Given a JS timestamp, return live "X min ago" string
-      const diff = Math.floor((Date.now() - ts) / 1000);
-      if (diff < 60) return `${diff}s ago`;
-      if (diff < 3600) return `${Math.floor(diff/60)} min ago`;
-      const h = Math.floor(diff/3600), m = Math.floor((diff%3600)/60);
-      return m > 0 ? `${h}h ${m}min ago` : `${h}h ago`;
-    }
-
     function calcDistances() {
       if (!userLat || !userLng) return;
       allStations.forEach(s => {
@@ -266,33 +257,23 @@
       });
     }
 
-    function confirmStation(idx, btnEl) {
+    // Use index to avoid any name-matching issues
+    function confirmStation(idx) {
       const s = allStations[idx];
       if (!s) return;
-      const now = Date.now();
-      confirmations[s.name] = (confirmations[s.name] || 0) + 1;
-      confirmTimes[s.name] = now; // Save local timestamp
+      // Update immediately in memory
       s.updated = 'just now';
       s.outdated = false;
-      // Update DOM directly
-      const card = btnEl.closest('article');
-      if (card) {
-        const timeEl = card.querySelector('.ctime');
-        if (timeEl) timeEl.innerHTML = '<span style="color:#4CAF50;font-size:10px;font-family:\'Space Mono\',monospace;">✓ confirmed just now</span>';
-        const countEl = card.querySelector('.confirm-count');
-        const count = confirmations[s.name];
-        if (countEl) countEl.textContent = '✓ ' + count + ' confirmed';
-        btnEl.textContent = '✓ Still the same (' + count + ')';
-        btnEl.style.background = '#c8e6c9';
-      }
-      showToast('✓ Confirmed! Saved to sheet.');
-      // Save to Google Sheet in background
+      confirmations[idx] = (confirmations[idx] || 0) + 1;
+      showToast('✓ Thanks! Updated to just now.');
+      render();
+      // Send to sheet in background
       fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name: s.name, zone: s.zone, status: s.status})
-      }).catch(e => console.log('Background save:', e));
+      }).catch(() => {});
     }
 
     function shareStation(name) {
@@ -307,27 +288,10 @@
       setTimeout(() => t.classList.remove('show'), 2500);
     }
 
-    // Every 30 seconds, update live timestamps on cards
-    function updateLiveTimes() {
-      Object.keys(confirmTimes).forEach(name => {
-        const cards = document.querySelectorAll('article');
-        cards.forEach(card => {
-          const nameEl = card.querySelector('.cn');
-          if (nameEl && nameEl.textContent.trim() === name) {
-            const timeEl = card.querySelector('.ctime');
-            if (timeEl) {
-              const t = liveTimeAgo(confirmTimes[name]);
-              timeEl.innerHTML = `<span style="color:#4CAF50;font-size:10px;font-family:'Space Mono',monospace;">✓ confirmed ${t}</span>`;
-            }
-          }
-        });
-      });
-    }
-
     async function loadData() {
       try {
         document.getElementById('list').innerHTML = '<div class="loading">Loading stations...</div>';
-        const res = await fetch(CSV_URL);
+        const res = await fetch(CSV_URL + '&t=' + Date.now());
         const text = await res.text();
         const rows = text.trim().split('\n').slice(1);
         const stationMap = {};
@@ -335,8 +299,15 @@
           const cols = parseCSVRow(row);
           const timestamp = cols[0]||'', name = cols[1]||'', area = cols[2]||'', statusRaw = cols[3]||'', notes = cols[4]||'';
           if (!name) return;
+          // Always keep the most recent row (latest timestamp wins)
+          const existing = stationMap[name];
+          if (existing && existing._rawTimestamp) {
+            const existingDate = new Date(existing._rawTimestamp.replace(/\//g,'-'));
+            const newDate = new Date(timestamp.replace(/\//g,'-'));
+            if (!isNaN(existingDate) && !isNaN(newDate) && newDate < existingDate) return;
+          }
           const t = timeAgo(timestamp);
-          stationMap[name] = { name, zone: area||'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old };
+          stationMap[name] = { name, zone: area||'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old, _rawTimestamp: timestamp };
         });
         allStations = Object.values(stationMap);
         if (allStations.length === 0) {
@@ -373,7 +344,7 @@
     function render() {
       const q = document.getElementById('search').value.toLowerCase();
       if (nearMe && userLat) calcDistances();
-      let list = allStations.filter(s => {
+      let list = allStations.map((s,i) => ({...s, _idx:i})).filter(s => {
         if (zone !== "All zones" && s.zone !== zone) return false;
         if (filter !== 'all' && s.status !== filter) return false;
         if (q && !s.name.toLowerCase().includes(q) && !s.zone.toLowerCase().includes(q)) return false;
@@ -386,20 +357,12 @@
       const el = document.getElementById('list');
       if (!list.length) { el.innerHTML=`<div class="empty-state"><div style="font-size:36px">⛽</div><p>No stations found.</p></div>`; return; }
       el.innerHTML = list.map(s => {
-        const idx = allStations.indexOf(s);
         const badge = s.status==='available'?`<span class="badge bav">✓ Available</span>`:s.status==='queue'?`<span class="badge bqu">⏳ Queue</span>`:`<span class="badge bem">✕ Empty</span>`;
         const notes = s.notes?`<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>`:'';
-        // Use local confirm time if available, otherwise use sheet time
-        let timeLabel;
-        if (confirmTimes[s.name]) {
-          const t = liveTimeAgo(confirmTimes[s.name]);
-          timeLabel = `<span style="color:#4CAF50;font-size:10px;font-family:'Space Mono',monospace;">✓ confirmed ${t}</span>`;
-        } else if (s.outdated) {
-          timeLabel = `<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`;
-        } else {
-          timeLabel = `<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
-        }
-        const count = confirmations[s.name]||0;
+        const timeLabel = s.outdated
+          ?`<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`
+          :`<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
+        const count = confirmations[s._idx]||0;
         const distLabel = s.distKm ? `· ${s.distKm.toFixed(1)} km away` : '';
         const safeName = s.name.replace(/'/g,"\\'");
         return `<article class="card ${s.status}">
@@ -410,7 +373,7 @@
             <button class="share-btn" onclick="shareStation('${safeName}')">🔗 Share</button>
           </div>
           <div class="card-actions">
-            <button class="btn-confirm" onclick="confirmStation(${idx}, this)">✓ Still the same${count>0?` (${count})`:''}</button>
+            <button class="btn-confirm" onclick="confirmStation(${s._idx})">✓ Still the same${count>0?` (${count})`:''}</button>
             <a class="btn-change" href="${FORM_URL}" target="_blank" rel="noopener">⚡ Situation changed?</a>
           </div>
         </article>`;
@@ -426,9 +389,7 @@
     }
 
     loadData(); tick();
-    setInterval(tick, 1000);
-    setInterval(tickCD, 1000);
-    setInterval(updateLiveTimes, 30000); // Update live timestamps every 30 seconds
+    setInterval(tick,1000); setInterval(tickCD,1000);
   </script>
 </body>
 </html>
