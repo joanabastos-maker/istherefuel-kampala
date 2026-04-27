@@ -257,33 +257,42 @@
       });
     }
 
-    // Use index to avoid any name-matching issues
-    async function confirmStation(idx) {
+    function getLocalConfirms() {
+      try { return JSON.parse(localStorage.getItem('fuelConfirmations') || '{}'); }
+      catch(e) { return {}; }
+    }
+
+    function saveLocalConfirm(stationName, timestamp) {
+      const saved = getLocalConfirms();
+      saved[stationName] = timestamp;
+      localStorage.setItem('fuelConfirmations', JSON.stringify(saved));
+    }
+
+    // Confirm the station and update the card immediately.
+    // Do not force-refresh straight away, because Google published CSV can take time to update.
+    function confirmStation(idx) {
       const s = allStations[idx];
       if (!s) return;
 
-      // Update immediately in memory
+      const now = new Date().toISOString();
+      s._rawTimestamp = now;
       s.updated = 'just now';
       s.outdated = false;
       confirmations[idx] = (confirmations[idx] || 0) + 1;
+      saveLocalConfirm(s.name, now);
+
       showToast('✓ Thanks! Updated to just now.');
       render();
 
-      // Send the confirmation to Google Sheets
       const params =
         '?name=' + encodeURIComponent(s.name) +
         '&zone=' + encodeURIComponent(s.zone) +
         '&status=' + encodeURIComponent(s.status) +
-        '&timestamp=' + encodeURIComponent(new Date().toISOString());
+        '&timestamp=' + encodeURIComponent(now);
 
-      try {
-        await fetch(SCRIPT_URL + params, { mode: 'no-cors' });
-
-        // Reload data after a short delay so the latest confirmation can appear after the Sheet updates
-        setTimeout(loadData, 1500);
-      } catch (e) {
-        showToast('Saved locally, but not synced.');
-      }
+      fetch(SCRIPT_URL + params, { mode: 'no-cors' }).catch(() => {
+        showToast('Saved on this device, but not synced.');
+      });
     }
 
     function shareStation(name) {
@@ -320,6 +329,22 @@
           stationMap[name] = { name, zone: area||'Other', status: parseStatus(statusRaw), notes, updated: t.text, outdated: t.old, _rawTimestamp: timestamp };
         });
         allStations = Object.values(stationMap);
+
+        // Apply local confirmations so the card does not jump back to the old CSV value while Google cache updates.
+        const savedConfirms = getLocalConfirms();
+        allStations.forEach(s => {
+          const localTimestamp = savedConfirms[s.name];
+          if (!localTimestamp) return;
+          const sheetDate = new Date((s._rawTimestamp || '').replace(/\//g,'-'));
+          const localDate = new Date(localTimestamp);
+          if (isNaN(sheetDate) || localDate > sheetDate) {
+            const t = timeAgo(localTimestamp);
+            s.updated = t.text;
+            s.outdated = t.old;
+            s._rawTimestamp = localTimestamp;
+          }
+        });
+
         if (allStations.length === 0) {
           allStations = [
             {name:"TotalEnergies — Nakasero",zone:"Nakasero",status:"available",updated:"sample",outdated:false,notes:"",lat:0.3176,lng:32.5811},
