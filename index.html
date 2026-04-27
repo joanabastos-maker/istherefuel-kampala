@@ -69,7 +69,7 @@
     .list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; transition: box-shadow .2s, background .3s; }
     .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.1); }
-    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 0; }
+    .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
     .card.available::before { background: var(--green); }
     .card.queue::before { background: var(--orange); }
     .card.empty::before { background: var(--red); }
@@ -90,10 +90,9 @@
     .share-btn { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; cursor: pointer; background: none; border: none; padding: 0; transition: color .15s; }
     .share-btn:hover { color: var(--yellow); }
     .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-    .btn-confirm { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid #c8e6c9; background: #f1faf2; color: var(--green); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
+    .btn-confirm { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid #c8e6c9; background: #f1faf2; color: var(--green); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-confirm:hover { background: #c8e6c9; }
-    .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
+    .btn-change { font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif; padding: 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s; }
     .btn-change:hover { border-color: var(--orange); color: var(--orange); }
     .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
     .empty-state p { font-size: 13px; margin-top: 6px; }
@@ -172,6 +171,8 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyp_8r9H6pRnatio0uZL9qePWgZByC8IYOzrRlD7fQQskpF7AsK9UwCyC2sgQe782jz/exec';
     let allStations = [], zone = "All zones", filter = "all", fuel = "petrol", countdown = 120;
     const confirmations = {};
+    // Store local confirmation timestamps
+    const confirmTimes = {};
     let userLat = null, userLng = null, nearMe = false;
 
     const ZONE_COORDS = {
@@ -207,8 +208,7 @@
           render();
         }, () => { showToast('Could not get your location'); });
       } else {
-        nearMe = false;
-        userLat = null; userLng = null;
+        nearMe = false; userLat = null; userLng = null;
         document.getElementById('nearme-btn').classList.remove('active');
         document.getElementById('nearme-btn').textContent = '📍 Near me';
         render();
@@ -247,26 +247,46 @@
       return { text, old: diff > 3600 };
     }
 
+    function liveTimeAgo(ts) {
+      // Given a JS timestamp, return live "X min ago" string
+      const diff = Math.floor((Date.now() - ts) / 1000);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff/60)} min ago`;
+      const h = Math.floor(diff/3600), m = Math.floor((diff%3600)/60);
+      return m > 0 ? `${h}h ${m}min ago` : `${h}h ago`;
+    }
+
     function calcDistances() {
       if (!userLat || !userLng) return;
       allStations.forEach(s => {
-        const coords = (s.lat && s.lng) ? {lat:s.lat, lng:s.lng} : ZONE_COORDS[s.zone] || ZONE_COORDS["Other"];
+        const coords = (s.lat && s.lng) ? {lat:s.lat,lng:s.lng} : ZONE_COORDS[s.zone] || ZONE_COORDS["Other"];
         const R=6371, dLat=(coords.lat-userLat)*Math.PI/180, dLng=(coords.lng-userLng)*Math.PI/180;
         const a=Math.sin(dLat/2)**2+Math.cos(userLat*Math.PI/180)*Math.cos(coords.lat*Math.PI/180)*Math.sin(dLng/2)**2;
         s.distKm = R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
       });
     }
 
-    function confirmStation(idx) {
+    function confirmStation(idx, btnEl) {
       const s = allStations[idx];
       if (!s) return;
-      // Update immediately — no waiting
+      const now = Date.now();
       confirmations[s.name] = (confirmations[s.name] || 0) + 1;
+      confirmTimes[s.name] = now; // Save local timestamp
       s.updated = 'just now';
       s.outdated = false;
-      showToast('✓ Confirmed! Updated to just now.');
-      render();
-      // Send to sheet in background
+      // Update DOM directly
+      const card = btnEl.closest('article');
+      if (card) {
+        const timeEl = card.querySelector('.ctime');
+        if (timeEl) timeEl.innerHTML = '<span style="color:#4CAF50;font-size:10px;font-family:\'Space Mono\',monospace;">✓ confirmed just now</span>';
+        const countEl = card.querySelector('.confirm-count');
+        const count = confirmations[s.name];
+        if (countEl) countEl.textContent = '✓ ' + count + ' confirmed';
+        btnEl.textContent = '✓ Still the same (' + count + ')';
+        btnEl.style.background = '#c8e6c9';
+      }
+      showToast('✓ Confirmed! Saved to sheet.');
+      // Save to Google Sheet in background
       fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -285,6 +305,23 @@
       const t = document.getElementById('toast');
       t.textContent = msg; t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // Every 30 seconds, update live timestamps on cards
+    function updateLiveTimes() {
+      Object.keys(confirmTimes).forEach(name => {
+        const cards = document.querySelectorAll('article');
+        cards.forEach(card => {
+          const nameEl = card.querySelector('.cn');
+          if (nameEl && nameEl.textContent.trim() === name) {
+            const timeEl = card.querySelector('.ctime');
+            if (timeEl) {
+              const t = liveTimeAgo(confirmTimes[name]);
+              timeEl.innerHTML = `<span style="color:#4CAF50;font-size:10px;font-family:'Space Mono',monospace;">✓ confirmed ${t}</span>`;
+            }
+          }
+        });
+      });
     }
 
     async function loadData() {
@@ -348,13 +385,20 @@
       document.getElementById('ce').textContent = allStations.filter(s=>s.status==='empty').length;
       const el = document.getElementById('list');
       if (!list.length) { el.innerHTML=`<div class="empty-state"><div style="font-size:36px">⛽</div><p>No stations found.</p></div>`; return; }
-      el.innerHTML = list.map((s, i) => {
+      el.innerHTML = list.map(s => {
         const idx = allStations.indexOf(s);
         const badge = s.status==='available'?`<span class="badge bav">✓ Available</span>`:s.status==='queue'?`<span class="badge bqu">⏳ Queue</span>`:`<span class="badge bem">✕ Empty</span>`;
         const notes = s.notes?`<div style="font-size:11px;color:var(--muted);margin-top:5px">💬 ${s.notes}</div>`:'';
-        const timeLabel = s.outdated
-          ?`<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`
-          :`<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
+        // Use local confirm time if available, otherwise use sheet time
+        let timeLabel;
+        if (confirmTimes[s.name]) {
+          const t = liveTimeAgo(confirmTimes[s.name]);
+          timeLabel = `<span style="color:#4CAF50;font-size:10px;font-family:'Space Mono',monospace;">✓ confirmed ${t}</span>`;
+        } else if (s.outdated) {
+          timeLabel = `<span style="color:#D97706;font-size:10px;font-family:'Space Mono',monospace;">⚠️ ${s.updated} · may be outdated</span>`;
+        } else {
+          timeLabel = `<span style="color:#bbb;font-size:10px;font-family:'Space Mono',monospace;">updated ${s.updated}</span>`;
+        }
         const count = confirmations[s.name]||0;
         const distLabel = s.distKm ? `· ${s.distKm.toFixed(1)} km away` : '';
         const safeName = s.name.replace(/'/g,"\\'");
@@ -366,7 +410,7 @@
             <button class="share-btn" onclick="shareStation('${safeName}')">🔗 Share</button>
           </div>
           <div class="card-actions">
-            <button class="btn-confirm" onclick="confirmStation(${idx})">✓ Still the same${count>0?` (${count})`:''}</button>
+            <button class="btn-confirm" onclick="confirmStation(${idx}, this)">✓ Still the same${count>0?` (${count})`:''}</button>
             <a class="btn-change" href="${FORM_URL}" target="_blank" rel="noopener">⚡ Situation changed?</a>
           </div>
         </article>`;
@@ -382,7 +426,9 @@
     }
 
     loadData(); tick();
-    setInterval(tick,1000); setInterval(tickCD,1000);
+    setInterval(tick, 1000);
+    setInterval(tickCD, 1000);
+    setInterval(updateLiveTimes, 30000); // Update live timestamps every 30 seconds
   </script>
 </body>
 </html>
