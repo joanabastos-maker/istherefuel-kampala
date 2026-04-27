@@ -267,13 +267,9 @@
       confirmations[idx] = (confirmations[idx] || 0) + 1;
       showToast('✓ Thanks! Updated to just now.');
       render();
-      // Send to sheet in background
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: s.name, zone: s.zone, status: s.status})
-      }).catch(() => {});
+      // Send to sheet via GET (works reliably with no-cors)
+      const params = '?name=' + encodeURIComponent(s.name) + '&zone=' + encodeURIComponent(s.zone) + '&status=' + encodeURIComponent(s.status);
+      fetch(SCRIPT_URL + params, { mode: 'no-cors' }).catch(() => {});
     }
 
     function shareStation(name) {
